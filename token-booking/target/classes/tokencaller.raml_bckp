@@ -1,0 +1,144 @@
+#%RAML 0.8
+---
+title: La Liga
+version: 1.0
+baseUri: http://localhost:8080/api
+documentation:
+  - title: Getting Started
+    content: |
+      This sample API has been created as part of your APIkit project. It is located in src/main/api. Feel free to poke around.
+/booking:
+  displayName: Booking system
+  #description: |
+  #  CRUD operations on booking token system
+  post:
+    description: add new token to the system
+    body:
+      application/json:
+       schema: |
+                { "$schema": "http://json-schema.org/schema",
+                  "userId": "object",
+                  "location": "23423dfsd",
+                  "toTime": "3434232",
+                  "fromTime": "3232343"
+                }
+          
+    responses:
+      201:
+        body:
+          application/json:
+             schema: |
+                { "$schema": "http://json-schema.org/schema",
+                  "UUID": "object"
+                }
+                
+  get:
+    description:  booking status
+    queryParameters:
+      location:
+        description: |
+          specify the location.
+        type: string
+        required: true
+        example: location
+      userId:
+        description: |
+          if user is specified, it will give the details of the user booking. if user id is given along with location id, it wil give specifics
+        type: string
+        required: false
+        example: location
+    responses:
+      200:
+        body:
+          application/json:
+            schema: |
+                { "$schema": "http://json-schema.org/schema",
+                  "UUID": "object",
+                  "description": "someother var from DB",
+                  "expectedTime": "2342342",
+                  "other info": "other info from table"
+                 }      
+  delete:
+    description: Add a new team to the league
+    queryParameters:
+      location:
+        description: |
+          Filter the list of teams by home city.
+        type: string
+        required: false
+        example: location   
+    responses:
+      204:
+          description: |
+            The resource has been succesfully removed.
+/queue:
+  displayName: queue
+  description: Retrieve the current standing for the current season
+  get:
+    queryParameters:
+      location:
+        description: |
+          Filter the list of teams by home city.
+        type: string
+        required: true
+        example: location   
+      userId:
+        description: |
+          Filter the list of teams by home city.
+        type: string
+        required: false
+        example: location   
+    responses:
+      200:
+        body:
+          application/json:
+            schema: |
+                { "$schema": "http://json-schema.org/schema",
+                  "type": "object",
+                  "description": "A canonical song",
+                  "properties": {
+                    "title":  { "type": "string" },
+                    "artist": { "type": "string" }
+                  },
+                  "required": [ "title", "artist" ]
+                }   
+  put:
+    description: claiming the token
+    body:
+          application/json:
+            schema: |
+                { "$schema": "http://json-schema.org/schema",
+                  "userId": "object",
+                  "location": "A canonical song",
+                  "toTime": "3434232",
+                  "fromTime": "3232343"
+                }
+    responses:
+      201:
+        body:
+          application/json:
+             schema: |
+                { "$schema": "http://json-schema.org/schema",
+                  "type": "object",
+                  "description": "A canonical song",
+                  "properties": {
+                    "title":  { "type": "string" },
+                    "artist": { "type": "string" }
+                  },
+                  "required": [ "title", "artist" ]
+                }
+  delete:
+    description: delete the queue
+    queryParameters:
+      location:
+        description: |
+          Filter the list of teams by home city.
+        type: string
+        required: false
+        example: location   
+    responses:
+      204:
+          description: |
+            The resource has been succesfully removed.
+            
+  

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd" version="EE-3.5.1">
+	<db:mysql-config name="MySQL_Configuration1" host="localhost"
+		port="3306" user="root" password="admin" database="users"
+		doc:name="MySQL Configuration" />
+    <apikit:config name="tokencallerV1-config" raml="tokencallerV1.raml" consoleEnabled="true" consolePath="console" doc:name="Router"/>
+    <apikit:mapping-exception-strategy name="tokencallerV1-apiKitGlobalExceptionMapping" doc:name="Mapping Exception Strategy">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+
+    <flow name="tokencallerV1-main" doc:name="tokencallerV1-main">
+        <http:inbound-endpoint address="http://localhost:8081/api" doc:name="HTTP"/>
+        <apikit:router config-ref="tokencallerV1-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="tokencallerV1-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+    </flow>
+    <flow name="put:/queue:application/json:tokencallerV1-config" doc:name="put:/queue:application/json:tokencallerV1-config">
+        <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="delete:/queue:tokencallerV1-config" doc:name="delete:/queue:tokencallerV1-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="delete:/booking:tokencallerV1-config" doc:name="delete:/booking:tokencallerV1-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="get:/queue/{locationId}/{userid}:tokencallerV1-config" doc:name="get:/queue/{locationId}/{userid}:tokencallerV1-config" processingStrategy="synchronous">
+        <set-payload value="#[message.inboundProperties['http.relative.path']]" doc:name="Set Payload"/>
+        <logger message="#[message.payload]]" level="INFO" doc:name="Logger"/>
+        <component class="com.token.booking.api.queue.QueueInfoController" doc:name="QueueController"/>
+        <scripting:transformer doc:name="Groovy">
+            <scripting:script engine="Groovy"><![CDATA[def query = "select uuid,fromTime,toTime, userId,locationId from TOKEN_BOOKING where "; 
+
+if(payload.size() >0 && payload.containsKey('userId') && payload.containsKey('location'))
+	query = query + " userId='"+payload.userId + "' and locationId='"+payload.location+"'";
+else if(payload.size() >0 && payload.containsKey('userId'))
+ query = query + " userId='"+payload.userId+"'";
+else if(payload.size() >0 && payload.containsKey('location'))
+	query = query + " locatonId='"+payload.location+"'";
+
+ payload.put('dynamicWhere', query);
+ return payload;]]></scripting:script>
+        </scripting:transformer>
+        <logger message="#[payload]" level="INFO" doc:name="sql query"/>
+        <db:select config-ref="MySQL_Configuration1" doc:name="toeken-booking DB">
+            <db:dynamic-query><![CDATA[#[message.payload.dynamicWhere]]]></db:dynamic-query>
+        </db:select>
+        <json:object-to-json-transformer name="CaseInsensitiveHashMapToJson" doc:name="Object to JSON"/>
+        <logger message="#[payload]" level="INFO" doc:name="out"/>
+
+    </flow>
+    <flow name="get:/booking/{locationId}:tokencallerV1-config" doc:name="get:/booking/{locationId}:tokencallerV1-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        
+    </flow>
+    <flow name="get:/queue/{locationId}:tokencallerV1-config" doc:name="get:/queue/{locationId}:tokencallerV1-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="get:/booking/{userid}:tokencallerV1-config" doc:name="get:/booking/{userid}:tokencallerV1-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="post:/booking:application/json:tokencallerV1-config" doc:name="post:/booking:application/json:tokencallerV1-config">
+        <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+</mule>
